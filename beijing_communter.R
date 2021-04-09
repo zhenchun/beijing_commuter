@@ -6,7 +6,8 @@ require(pairwiseCI)
 require(readr)
 require(Hmisc)
 require(PerformanceAnalytics)
-
+require(chron)
+require(lubridate)
 
 #####functions#################
 filterMDv4<-function(fileTOfilter){
@@ -114,19 +115,27 @@ bus.all = do.call(rbind, bus)
 
 bus_summary<-bus.all %>%
   group_by(id) %>%
-  dplyr::summarize(a.mean = mean(Number), g.mean=gm_mean(Number),median=median(Number), 
-            max=max(Number), min=min(Number), sd=sd(Number),q5=quantile(Number, probs = 0.05),
-            q25=quantile(Number, probs = 0.25), q75=quantile(Number, probs = 0.75),
-            q95=quantile(Number, probs = 0.95), length=length(Number))
+  dplyr::summarize(number.amean = mean(Number), number.gmean=gm_mean(Number),number.median=median(Number), 
+                   number.max=max(Number), number.min=min(Number), number.sd=sd(Number),number.q5=quantile(Number, probs = 0.05),
+                   number.q25=quantile(Number, probs = 0.25), number.q75=quantile(Number, probs = 0.75),
+                   number.q95=quantile(Number, probs = 0.95))
 
 
 
 bus_summary_size<-bus.all %>%
   group_by(id) %>%
-  dplyr::summarize(mean = mean(Size),median=median(Size), 
-                   max=max(Size), min=min(Size))
+  dplyr::summarize(size.mean = mean(Size),size.median=median(Size), 
+                   size.max=max(Size), size.min=min(Size))
 
 
+
+bus_summary_time<-bus.all %>% 
+                  group_by(id) %>% 
+                  summarise(start_time = min(PosixTime), end_time = max(PosixTime), length=length(id))
+
+bus_merge<-merge(bus_summary_time, bus_summary, by="id") %>% merge(bus_summary_size, by="id")
+
+bus_merge$type<-"bus"
 
 #################################################################################
 ###########################load car data######################################### 
@@ -153,15 +162,24 @@ car.all = do.call(rbind, car)
 
 car_summary<-car.all %>%
   group_by(id) %>%
-  dplyr::summarize(a.mean = mean(Number), g.mean=gm_mean(Number),median=median(Number), 
-            max=max(Number), min=min(Number), sd=sd(Number),q5=quantile(Number, probs = 0.05),
-            q25=quantile(Number, probs = 0.25), q75=quantile(Number, probs = 0.75),
-            q95=quantile(Number, probs = 0.95), length=length(Number))
+  dplyr::summarize(number.amean = mean(Number), number.gmean=gm_mean(Number),number.median=median(Number), 
+                   number.max=max(Number), number.min=min(Number), number.sd=sd(Number),number.q5=quantile(Number, probs = 0.05),
+                   number.q25=quantile(Number, probs = 0.25), number.q75=quantile(Number, probs = 0.75),
+                   number.q95=quantile(Number, probs = 0.95))
 
 car_summary_size<-car.all %>%
-  group_by(id) %>%
-  dplyr::summarize(mean = mean(Size),median=median(Size), 
-                   max=max(Size), min=min(Size))
+                  group_by(id) %>%
+                  dplyr::summarize(size.mean = mean(Size),size.median=median(Size), 
+                  size.max=max(Size), size.min=min(Size))
+
+
+car_summary_time<-car.all %>% 
+                  group_by(id) %>% 
+                  summarise(start_time = min(PosixTime), end_time = max(PosixTime), length=length(id))
+
+car_merge<-merge(car_summary_time, car_summary, by="id") %>% merge(car_summary_size, by="id")
+
+car_merge$type<-"car"
 
 ######################################################################################################
 #################################load bicycle data#####################################################
@@ -188,16 +206,24 @@ bicycle.all = do.call(rbind, bicycle)
 
 bicycle_summary<-bicycle.all %>%
   group_by(id) %>%
-  dplyr::summarize(a.mean = mean(Number), g.mean=gm_mean(Number),median=median(Number), 
-            max=max(Number), min=min(Number), sd=sd(Number),q5=quantile(Number, probs = 0.05),
-            q25=quantile(Number, probs = 0.25), q75=quantile(Number, probs = 0.75),
-            q95=quantile(Number, probs = 0.95), length=length(Number))
+  dplyr::summarize(number.amean = mean(Number), number.gmean=gm_mean(Number),number.median=median(Number), 
+                   number.max=max(Number), number.min=min(Number), number.sd=sd(Number),number.q5=quantile(Number, probs = 0.05),
+                   number.q25=quantile(Number, probs = 0.25), number.q75=quantile(Number, probs = 0.75),
+                   number.q95=quantile(Number, probs = 0.95))
 
 
 bicycle_summary_size<-bicycle.all %>%
-  group_by(id) %>%
-  dplyr::summarize(mean = mean(Size),median=median(Size), 
-                   max=max(Size), min=min(Size))
+                      group_by(id) %>%
+                      dplyr::summarize(size.mean = mean(Size),size.median=median(Size), 
+                      size.max=max(Size), size.min=min(Size))
+
+bicycle_summary_time<-bicycle.all %>% 
+                      group_by(id) %>% 
+                      summarise(start_time = min(PosixTime), end_time = max(PosixTime), length=length(id))
+
+bicycle_merge<-merge(bicycle_summary_time, bicycle_summary, by="id") %>% merge(bicycle_summary_size, by="id")
+
+bicycle_merge$type<-"bicycle"
 
 ###################################################################################################
 ################load subway data###################################################################
@@ -224,18 +250,94 @@ subway.all = do.call(rbind, subway)
 
 
 
+
+
+##############################################################################################################################
+#subway data id==7&12 have small amount of data available. Thus, deleted.id=14 has strange data inclusion. deleted as well.###
+###############################################################################################################################
+subway.all1<-subway.all[-which(subway.all$id==7 | subway.all$id==12),]
+
+subway_summary<-subway.all1 %>%
+  group_by(id) %>%
+  dplyr::summarize(number.amean = mean(Number), number.gmean=gm_mean(Number),number.median=median(Number), 
+                   number.max=max(Number), number.min=min(Number), number.sd=sd(Number),number.q5=quantile(Number, probs = 0.05),
+                   number.q25=quantile(Number, probs = 0.25), number.q75=quantile(Number, probs = 0.75),
+                   number.q95=quantile(Number, probs = 0.95))
+
+subway_summary_size<-subway.all1 %>%
+                     group_by(id) %>%
+                     dplyr::summarize(size.mean = mean(Size),size.median=median(Size), 
+                     size.max=max(Size), size.min=min(Size))
+
+subway_summary_time<- subway.all1 %>% 
+                      group_by(id) %>% 
+                      summarise(start_time = min(PosixTime), end_time = max(PosixTime), length=length(id))
+
+
+subway_merge<-merge(subway_summary_time, subway_summary, by="id") %>% merge(subway_summary_size, by="id")
+
+subway_merge$type<-"subway"
+
 ############################################################################
 ###############load info data################################################
 ##########################################################################
 
-
-bus_info <- read_csv("C:/Users/zy125/Box Sync/PhD/Beijing/bus_info.csv")
-subway_info <- read_csv("C:/Users/zy125/Box Sync/PhD/Beijing/subway_info.csv")
-car_info <- read_csv("C:/Users/zy125/Box Sync/PhD/Beijing/car_info.csv")
-bicycle_info <- read_csv("C:/Users/zy125/Box Sync/PhD/Beijing/bicycle_info.csv")
+commuter<-bind_rows(bus_merge, car_merge) %>% bind_rows(bicycle_merge) %>% bind_rows(subway_merge)
 
 
+commuter<-commuter %>% mutate(peak = case_when(
+  is.weekend(as.Date(start_time, tz="asia/shanghai")) ~ FALSE,
+  (hour(start_time)>=7 & hour(start_time)<9) ~ TRUE,
+  (hour(start_time)>=17 & hour(start_time)<20) ~ TRUE,
+  TRUE ~ FALSE)
+)
 
+commuter$weekdays<-as.factor(ifelse(weekdays(commuter$start_time) %in% c("Saturday", "Sunday"), "weekend", "weekday"))
+
+beijing<- read_csv("commuter.csv") ##manually add information
+
+
+##############################################################################
+##################combine travel modes#######################################
+##################################################################################
+
+
+
+beijing %>% group_by(type)%>% 
+  dplyr::summarize(n=n())
+
+
+beijing %>% group_by(period)%>% 
+  dplyr::summarize(n=n())
+
+
+
+beijing %>% group_by(pattern, type)%>% 
+  dplyr::summarize(n=n())
+
+beijing_summary_size<-beijing %>%
+   group_by(type) %>%
+   dplyr::summarize( mean = mean(size.mean),sd=sd(size.mean), max=max(size.mean), min=min(size.mean))
+
+
+
+beijing_cor<-beijing[,c(13,14,15,16,18,20,27)]
+
+bus_cor<-bus_info[,c(13,14,15,17,20,26)]
+
+bicycle_cor<-bicycle[,c(11,12,13,14,15,17,20,26)]
+
+res2 <- rcorr(as.matrix(beijing_cor))
+
+
+outdoor<-rbind(bus, bicycle)
+
+outdoor_cor<-outdoor[,c(11,12,13,14,15,17,20,26)]
+
+res2_outdoor <- rcorr(as.matrix(outdoor_cor))
+
+
+chart.Correlation(beijing_cor, histogram=TRUE)
 
 
 
@@ -262,75 +364,6 @@ bicycle_subway<-beijing[which(beijing$type=="bicycle"| beijing$type=="subway" ),
 
 t.test(g.mean~type, data=bicycle_subway)
 
-
-
-
-
-
-
-
-##############################################################################################################################
-#subway data id==7&12 have small amount of data available. Thus, deleted.id=14 has strange data inclusion. deleted as well.###
-###############################################################################################################################
-subway.all1<-subway.all[-which(subway.all$id==7 | subway.all$id==12),]
-
-subway_summary<-subway.all1 %>%
-  group_by(id) %>%
-  dplyr::summarize(a.mean = mean(Number), g.mean=gm_mean(Number),median=median(Number), 
-                   max=max(Number), min=min(Number), sd=sd(Number),q5=quantile(Number, probs = 0.05),
-                   q25=quantile(Number, probs = 0.25), q75=quantile(Number, probs = 0.75),
-                   q95=quantile(Number, probs = 0.95), length=length(Number))
-
-subway_summary_size<-subway.all1 %>%
-  group_by(id) %>%
-  dplyr::summarize(mean = mean(Size),median=median(Size), 
-                   max=max(Size), min=min(Size))
-
-
-##############################################################################
-##################combine travel modes#######################################
-##################################################################################
-
-
-
-beijing<-as.data.frame(rbind(bus_info, car_info, bicycle_info, subway_info))
-
-
-beijing %>% group_by(type)%>% 
-  dplyr::summarize(n=n())
-
-
-beijing %>% group_by(period)%>% 
-  dplyr::summarize(n=n())
-
-
-
-beijing %>% group_by(pattern)%>% 
-  dplyr::summarize(n=n())
-
-beijing_summary_size<-beijing %>%
-   group_by(type) %>%
-   dplyr::summarize( mean = mean(size.mean),sd=sd(size.mean), max=max(size.mean), min=min(size.mean))
-
-
-
-beijing_cor<-beijing[,c(11,13,14,15,17,20,26)]
-
-bus_cor<-bus[,c(11,13,14,15,17,20,26)]
-
-bicycle_cor<-bicycle[,c(11,12,13,14,15,17,20,26)]
-
-res2 <- rcorr(as.matrix(beijing_cor))
-
-
-outdoor<-rbind(bus, bicycle)
-
-outdoor_cor<-outdoor[,c(11,12,13,14,15,17,20,26)]
-
-res2_outdoor <- rcorr(as.matrix(outdoor_cor))
-
-
-chart.Correlation(beijing_cor, histogram=TRUE)
 ######plot####################################################################################
 
 tiff("Figure1.tiff", units="in", width=8, height=6, res=300)
