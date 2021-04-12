@@ -391,7 +391,7 @@ ggplot(beijing, aes( x=type))+geom_boxplot(aes(y=PM25_30*1000),fill="grey")+geom
   theme(text = element_text(size=14),legend.position="bottom")+scale_y_continuous(
     
     # Features of the first axis
-    name = "Temperature (Celsius °)",
+    name = "Temperature (Celsius Â°)",
     
     # Add a second axis and specify its features
     sec.axis = sec_axis(~./100, name="Price ($)")
